@@ -1,5 +1,4 @@
 name: Generate lockfile
-
 on:
   workflow_dispatch:
 
@@ -10,19 +9,35 @@ jobs:
   lockfile:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           ref: main
-      - uses: actions/setup-node@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+
+      - name: Show versions
+        run: node -v && npm -v
+
       # Crea SOLO el package-lock.json a partir de package.json
-      - run: npm install --package-lock-only
-      - name: Commit lockfile
+      - name: Create lockfile
+        run: npm install --package-lock-only --ignore-scripts
+
+      - name: Commit lockfile if created/changed
         run: |
+          if [ ! -f package-lock.json ]; then
+            echo "::error::package-lock.json was not generated"; exit 1
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git commit -m "chore: add package-lock.json for Firebase App Hosting"
-          git push
+          if git status --porcelain | grep -q "package-lock.json"; then
+            git add package-lock.json
+            git commit -m "chore: add package-lock.json for Firebase App Hosting"
+            git push
+          else
+            echo "No changes to commit."
+          fi
