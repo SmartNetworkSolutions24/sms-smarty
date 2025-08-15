@@ -1,4 +1,4 @@
 export default function handler(req, res) {
-  if (req.method === 'POST') return res.status(200).send('PONG');
-  return res.status(200).send('OK');
+  res.status(200).end(); // cuerpo vacío => Content-Length: 0
 }
+
