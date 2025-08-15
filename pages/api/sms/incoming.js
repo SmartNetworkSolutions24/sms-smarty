@@ -1,3 +1,4 @@
-export default function handler(_req, res) {
-  return res.status(200).send('OK');
+export default function handler(req, res) {
+  res.status(200).end(); // cuerpo vacío => Content-Length: 0
 }
+
