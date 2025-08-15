@@ -1,8 +1,8 @@
 export default function handler(req, res) {
-  // Twilio SIEMPRE usa POST para webhooks de SMS
   if (req.method !== 'POST') {
-    return res.status(200).end(); // 200 vacío para GET/otros
+    return res.status(200).end(); // Twilio usa POST; para GET devolvemos vacío
   }
-  res.setHeader('Content-Type', 'application/xml');
-  return res.status(200).send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
+  res.setHeader('Content-Type', 'application/xml; charset=UTF-8');
+  // ¡Importante! que el primer byte sea '<' (nada antes)
+  res.status(200).send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
 }
