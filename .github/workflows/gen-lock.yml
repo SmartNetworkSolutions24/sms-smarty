@@ -18,12 +18,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          # ⚠️ NO cache aquí; no hay lockfile todavía
 
       - name: Show versions
         run: node -v && npm -v
 
-      # Crea SOLO el package-lock.json a partir de package.json
       - name: Create lockfile
         run: npm install --package-lock-only --ignore-scripts
 
@@ -41,3 +40,4 @@ jobs:
           else
             echo "No changes to commit."
           fi
+
