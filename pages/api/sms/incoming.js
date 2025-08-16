@@ -11,16 +11,17 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Twilio manda application/x-www-form-urlencoded
     const raw = await getRawBody(req, { encoding: 'utf8' });
     const p = new URLSearchParams(raw);
 
     const from = p.get('From') || '';
     const to = p.get('To') || '';
-    const text = p.get('Body') || '';          // <-- EL TEXTO DEL SMS
+    const text = p.get('Body') || '';            // <- AQUÍ viene el SMS real
     const messageSid = p.get('MessageSid') || '';
 
     const conversationKey = [from, to].sort().join('__');
-    const now = Date.now();
+    const now = new Date();
 
     await db
       .collection('conversations')
@@ -30,17 +31,19 @@ export default async function handler(req, res) {
         messageSid,
         from,
         to,
-        body: text,               // <-- guarda el texto real
+        body: text,                               // <- guardar el texto real
         direction: 'inbound',
-        createdAt: new Date(now),
-        createdAtMs: now,
+        createdAt: now,
+        createdAtMs: now.getTime(),
       });
 
+    // Respuesta para Twilio (solo acuse de recibo)
     res.setHeader('Content-Type', 'text/plain');
-    return res.status(200).send('OK');         // OK solo como acuse de recibo
+    return res.status(200).send('OK');
   } catch (err) {
-    console.error(err);
+    console.error('incoming webhook error', err);
     return res.status(500).json({ error: 'internal_error' });
   }
 }
+
 
