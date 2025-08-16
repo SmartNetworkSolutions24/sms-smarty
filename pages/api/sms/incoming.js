@@ -1,3 +1,5 @@
+# 1) Sobrescribe el archivo con la versión JavaScript correcta
+cat > pages/api/sms/incoming.js <<'EOF'
 // pages/api/sms/incoming.js
 import getRawBody from 'raw-body';
 import { db } from '../../../src/lib/firebase-admin';
@@ -84,5 +86,22 @@ export default async function handler(req, res) {
       .send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
   }
 }
+EOF
+
+# 2) (Opcional pero recomendado) Ignorar artefactos
+cat > .gitignore <<'EOF'
+node_modules/
+.next/
+.env
+EOF
+
+# 3) Trae cambios remotos por si hubo otro push
+git pull --rebase origin main
+
+# 4) Commitea y sube
+git add pages/api/sms/incoming.js .gitignore
+git commit -m "fix(api): inbound Twilio webhook in JS + add .gitignore"
+git push origin main
+
 
 
