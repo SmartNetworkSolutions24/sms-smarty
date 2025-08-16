@@ -2,7 +2,9 @@
 import getRawBody from 'raw-body';
 import { db } from '../../../src/lib/firebase-admin';
 
-export const config = { api: { bodyParser: false } };
+export const config = {
+  api: { bodyParser: false },
+};
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -11,37 +13,35 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Twilio manda application/x-www-form-urlencoded
-    const raw = await getRawBody(req, { encoding: 'utf8' });
-    const p = new URLSearchParams(raw);
+    // Twilio envía application/x-www-form-urlencoded
+    const rawText = await getRawBody(req, { encoding: 'utf8' });
+    const params = new URLSearchParams(rawText);
 
-    const from = p.get('From') || '';
-    const to = p.get('To') || '';
-    const text = p.get('Body') || '';            // <- AQUÍ viene el SMS real
-    const messageSid = p.get('MessageSid') || '';
+    const from = params.get('From') || '';
+    const to = params.get('To') || '';
+    const messageBody = params.get('Body') || '';
 
+    // clave estable para la conversación (par from/to)
     const conversationKey = [from, to].sort().join('__');
-    const now = new Date();
 
+    const now = new Date();
     await db
       .collection('conversations')
       .doc(conversationKey)
       .collection('messages')
       .add({
-        messageSid,
+        direction: 'inbound',
         from,
         to,
-        body: text,                               // <- guardar el texto real
-        direction: 'inbound',
+        body: messageBody,      // << guarda el texto real del SMS
         createdAt: now,
         createdAtMs: now.getTime(),
       });
 
-    // Respuesta para Twilio (solo acuse de recibo)
-    res.setHeader('Content-Type', 'text/plain');
+    // Twilio solo necesita 200 OK; el texto de respuesta da igual
     return res.status(200).send('OK');
   } catch (err) {
-    console.error('incoming webhook error', err);
+    console.error('inbound webhook error:', err);
     return res.status(500).json({ error: 'internal_error' });
   }
 }
