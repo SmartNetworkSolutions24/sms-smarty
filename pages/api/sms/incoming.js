@@ -3,7 +3,7 @@ import getRawBody from 'raw-body';
 import { db } from '../../../src/lib/firebase-admin';
 
 export const config = {
-  api: { bodyParser: false }, // Twilio envía x-www-form-urlencoded (sin JSON)
+  api: { bodyParser: false },
 };
 
 export default async function handler(req, res) {
@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1) Leer el cuerpo crudo (x-www-form-urlencoded) y parsearlo
+    // Twilio envía application/x-www-form-urlencoded
     const rawText = await getRawBody(req, { encoding: 'utf8' });
     const params = new URLSearchParams(rawText);
 
@@ -21,40 +21,31 @@ export default async function handler(req, res) {
     const to = params.get('To') || '';
     const body = params.get('Body') || '';
 
-    // 2) Clave de conversación estable: mismo par de números => mismo doc
+    // clave estable para la conversación (par from/to)
     const conversationKey = [from, to].sort().join('__');
 
-    // 3) Guardar el mensaje entrante en Firestore
     const now = new Date();
     await db
       .collection('conversations')
       .doc(conversationKey)
       .collection('messages')
       .add({
+        direction: 'inbound',
         from,
         to,
-        body,
-        direction: 'inbound',
-        createdAt: now,            // Timestamp legible
-        createdAtMs: now.getTime(),// Para ordenar rápido en el cliente
-        twilio: {
-          messageSid: params.get('MessageSid') || params.get('SmsSid') || null,
-          messagingServiceSid: params.get('MessagingServiceSid') || null,
-          smsStatus: params.get('SmsStatus') || null,
-          numSegments: params.get('NumSegments')
-            ? Number(params.get('NumSegments'))
-            : null,
-          apiVersion: params.get('ApiVersion') || null,
-        },
+        body,                // guarda el texto real del SMS
+        createdAt: now,
+        createdAtMs: now.getTime(),
       });
 
-    // 4) No responder nada (sin auto-replies). 204 = éxito sin cuerpo
+    // ✅ No queremos autorresponder → 204 evita que Twilio intente parsear TwiML
     return res.status(204).end();
   } catch (err) {
-    console.error('Inbound SMS webhook error:', err);
+    console.error('inbound webhook error:', err);
     return res.status(500).json({ error: 'internal_error' });
   }
 }
+
 
 
 
