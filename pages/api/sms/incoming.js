@@ -9,7 +9,8 @@ export const config = {
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    res.status(405).json({ error: 'Method Not Allowed' });
+    return;
   }
 
   try {
@@ -19,31 +20,32 @@ export default async function handler(req, res) {
 
     const from = params.get('From') || '';
     const to = params.get('To') || '';
-    const messageBody = params.get('Body') || '';
+    const body = params.get('Body') || '';
 
     // clave estable para la conversación (par from/to)
     const conversationKey = [from, to].sort().join('__');
 
     const now = new Date();
-    await db
-      .collection('conversations')
+    await db.collection('conversations')
       .doc(conversationKey)
       .collection('messages')
       .add({
         direction: 'inbound',
         from,
         to,
-        body: messageBody,      // << guarda el texto real del SMS
+        body,
         createdAt: now,
         createdAtMs: now.getTime(),
       });
 
-    // Twilio solo necesita 200 OK; el texto de respuesta da igual
-    return res.status(200).send('OK');
+    // Responder TwiML vacío evita 12200 y NO envía auto-respuesta
+    res.status(200).setHeader('Content-Type', 'text/xml');
+    res.send('<Response></Response>');
   } catch (err) {
     console.error('inbound webhook error:', err);
-    return res.status(500).json({ error: 'internal_error' });
+    // Aun en error, devuelve TwiML vacío para que Twilio no reintente
+    res.status(200).setHeader('Content-Type', 'text/xml');
+    res.send('<Response></Response>');
   }
 }
-
 
